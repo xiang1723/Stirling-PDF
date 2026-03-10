@@ -46,9 +46,30 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
+      - name: Diagnostics before build
+        shell: pwsh
+        run: |
+          Write-Host "Workspace: $pwd"
+          Get-Item scripts/build-windows-portable-local-only.bat | Format-List FullName,Length,LastWriteTime
+          Get-Item scripts/check-windows-portable-prereqs.bat | Format-List FullName,Length,LastWriteTime
+          node --version
+          npm --version
+          rustc --version
+          cargo --version
+          java --version
+
       - name: Build Windows portable package (local-only)
-        shell: cmd
-        run: scripts\build-windows-portable-local-only.bat
+        shell: pwsh
+        run: |
+          cmd /c "call scripts\check-windows-portable-prereqs.bat"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Prerequisite check failed with exit code $LASTEXITCODE"
+          }
+
+          cmd /c "call scripts\build-windows-portable-local-only.bat"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Portable build failed with exit code $LASTEXITCODE"
+          }
 
       - name: Verify portable artifact
         shell: pwsh
