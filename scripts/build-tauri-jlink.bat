@@ -15,7 +15,7 @@ if errorlevel 1 (
 
 jlink --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] jlink is not available. Please ensure you have a JDK (not just JRE) installed.
+    echo [ERROR] jlink is not available. Please ensure you have a JDK - not just JRE - installed.
     exit /b 1
 )
 

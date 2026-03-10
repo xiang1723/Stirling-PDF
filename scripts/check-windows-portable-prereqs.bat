@@ -127,6 +127,6 @@ if %JAVA_EFFECTIVE_MAJOR% LSS 21 (
   echo [FAIL] Java 21 or newer required. Detected: %JAVA_EFFECTIVE_MAJOR%
   set "FAILED=1"
 ) else (
-  echo [ OK ] Java version check passed (detected %JAVA_EFFECTIVE_MAJOR%)
+  echo [ OK ] Java version check passed, detected %JAVA_EFFECTIVE_MAJOR%
 )
 exit /b 0
