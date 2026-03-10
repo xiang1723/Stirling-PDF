@@ -7,8 +7,8 @@ set "FAILED=0"
 
 echo [Prereq] Checking Windows portable build prerequisites...
 
-call :check_cmd java "Java runtime (JDK 21+ required)"
-call :check_cmd jlink "jlink (must come from JDK, not JRE)"
+call :check_cmd java "Java runtime - JDK 21+ required"
+call :check_cmd jlink "jlink - must come from JDK, not JRE"
 call :check_cmd node "Node.js"
 call :check_cmd npm "npm"
 call :check_cmd rustc "Rust compiler"
@@ -75,12 +75,13 @@ if "%FAILED%"=="0" (
 set "CMD=%~1"
 set "DESC=%~2"
 where "%CMD%" >nul 2>&1
-if errorlevel 1 (
-  echo [FAIL] %DESC% - command not found: %CMD%
-  set "FAILED=1"
-) else (
-  echo [ OK ] %DESC%
-)
+if errorlevel 1 goto :check_cmd_fail
+echo [ OK ] !DESC!
+exit /b 0
+
+:check_cmd_fail
+echo [FAIL] !DESC! - command not found: !CMD!
+set "FAILED=1"
 exit /b 0
 
 :check_java_major
