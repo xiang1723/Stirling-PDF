@@ -65,7 +65,7 @@ echo [OK] Java %JAVA_EFFECTIVE_MAJOR% and jlink detected
 echo [INFO] Building Stirling-PDF JAR...
 
 set "DISABLE_ADDITIONAL_FEATURES=true"
-call gradlew.bat clean bootJar --no-daemon
+call gradlew.bat clean bootJar -PnoSpotless -x spotlessApply -x spotlessCheck --no-daemon
 if errorlevel 1 (
     echo [ERROR] Failed to build Stirling-PDF JAR
     exit /b 1
