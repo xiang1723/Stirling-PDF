@@ -137,6 +137,24 @@ export class ConnectionModeService {
   }
 
   /**
+   * Force desktop app into local bundled-backend mode.
+   * Used by portable/offline builds to bypass setup wizard and SaaS routing.
+   */
+  async ensurePortableLocalMode(): Promise<void> {
+    await invoke('set_connection_mode', {
+      mode: 'saas',
+      serverConfig: null,
+      lockConnectionMode: false,
+    });
+
+    this.currentConfig = { mode: 'saas', server_config: null, lock_connection_mode: false };
+    this.configLoadedOnce = true;
+
+    endpointAvailabilityService.clearCache();
+    this.notifyListeners();
+  }
+
+  /**
    * Test connection to a server URL with comprehensive multi-stage diagnostics
    * @returns Detailed test results with diagnostics and recommendations
    */

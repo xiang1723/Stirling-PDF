@@ -31,6 +31,7 @@ const COMMON_TOOL_ENDPOINTS = [
   '/api/v1/security/remove-password',
   '/api/v1/general/extract-pages',
 ];
+const DESKTOP_LOCAL_ONLY_MODE = import.meta.env.VITE_DESKTOP_LOCAL_ONLY === 'true';
 
 /**
  * Desktop application providers
@@ -40,15 +41,31 @@ const COMMON_TOOL_ENDPOINTS = [
  */
 export function AppProviders({ children }: { children: ReactNode }) {
   const { isFirstLaunch, setupComplete } = useFirstLaunchCheck();
-  const [connectionMode, setConnectionMode] = useState<'saas' | 'selfhosted' | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [connectionMode, setConnectionMode] = useState<'saas' | 'selfhosted' | null>(
+    DESKTOP_LOCAL_ONLY_MODE ? 'saas' : null
+  );
+  const [authChecked, setAuthChecked] = useState(DESKTOP_LOCAL_ONLY_MODE);
+  const [isAuthenticated, setIsAuthenticated] = useState(DESKTOP_LOCAL_ONLY_MODE);
   // Load connection mode on mount
   useEffect(() => {
+    if (DESKTOP_LOCAL_ONLY_MODE) {
+      void connectionModeService
+        .ensurePortableLocalMode()
+        .then(() => setConnectionMode('saas'))
+        .catch(() => setConnectionMode('saas'));
+      return;
+    }
+
     void connectionModeService.getCurrentMode().then(setConnectionMode);
   }, []);
 
   useEffect(() => {
+    if (DESKTOP_LOCAL_ONLY_MODE) {
+      setAuthChecked(true);
+      setIsAuthenticated(true);
+      return;
+    }
+
     if (!isFirstLaunch && setupComplete) {
       authService.isAuthenticated()
         .then(setIsAuthenticated)
@@ -62,6 +79,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
   // Initialize backend health monitoring for self-hosted mode
   useEffect(() => {
+    if (DESKTOP_LOCAL_ONLY_MODE) {
+      return;
+    }
+
     if (setupComplete && !isFirstLaunch && connectionMode === 'selfhosted') {
       void tauriBackendService.initializeExternalBackend();
     }
@@ -69,7 +90,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
   // Initialize monitoring for bundled backend (already started in Rust)
   // This sets up port detection and health checks
-  const shouldMonitorBackend = setupComplete && !isFirstLaunch && connectionMode === 'saas';
+  const shouldMonitorBackend =
+    DESKTOP_LOCAL_ONLY_MODE || (setupComplete && !isFirstLaunch && connectionMode === 'saas');
   useBackendInitializer(shouldMonitorBackend);
 
   // Preload endpoint availability after backend is healthy
@@ -142,7 +164,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }
 
   // Show setup wizard on first launch
-  if (isFirstLaunch && !setupComplete) {
+  if (!DESKTOP_LOCAL_ONLY_MODE && isFirstLaunch && !setupComplete) {
     return (
       <ProprietaryAppProviders
         appConfigRetryOptions={{
@@ -165,7 +187,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }
 
   // Show setup wizard when not authenticated (desktop login flow).
-  if (authChecked && !isAuthenticated) {
+  if (!DESKTOP_LOCAL_ONLY_MODE && authChecked && !isAuthenticated) {
     return (
       <ProprietaryAppProviders
         appConfigRetryOptions={{

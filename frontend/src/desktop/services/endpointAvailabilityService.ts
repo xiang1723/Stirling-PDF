@@ -1,5 +1,6 @@
 import { fetch } from '@tauri-apps/plugin-http';
 import { STIRLING_SAAS_BACKEND_API_URL } from '@app/constants/connection';
+const DESKTOP_LOCAL_ONLY_MODE = import.meta.env.VITE_DESKTOP_LOCAL_ONLY === 'true';
 
 /**
  * Service for checking endpoint availability on the local bundled backend.
@@ -79,6 +80,10 @@ export class EndpointAvailabilityService {
    * @returns Promise<boolean> - true if supported on SaaS, false otherwise
    */
   async isEndpointSupportedOnSaaS(endpoint: string): Promise<boolean> {
+    if (DESKTOP_LOCAL_ONLY_MODE) {
+      return false;
+    }
+
     // Check cache first
     const cached = this.saasCache.get(endpoint);
     const expiry = this.saasCacheExpiry.get(endpoint);

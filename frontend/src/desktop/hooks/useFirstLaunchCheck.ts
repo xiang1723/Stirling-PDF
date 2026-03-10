@@ -11,9 +11,17 @@ export function useFirstLaunchCheck(): { isFirstLaunch: boolean; setupComplete: 
   const [isFirstLaunch, setIsFirstLaunch] = useState(false);
   const [setupComplete, setSetupComplete] = useState(false);
   const setupCheckCompleteRef = useRef(false);
+  const isDesktopLocalOnlyMode = import.meta.env.VITE_DESKTOP_LOCAL_ONLY === 'true';
 
   // Check if this is first launch
   useEffect(() => {
+    if (isDesktopLocalOnlyMode) {
+      setIsFirstLaunch(false);
+      setSetupComplete(true);
+      setupCheckCompleteRef.current = true;
+      return;
+    }
+
     const checkFirstLaunch = async () => {
       try {
         const firstLaunch = await connectionModeService.isFirstLaunch();
@@ -38,7 +46,7 @@ export function useFirstLaunchCheck(): { isFirstLaunch: boolean; setupComplete: 
     if (!setupCheckCompleteRef.current) {
       checkFirstLaunch();
     }
-  }, []);
+  }, [isDesktopLocalOnlyMode]);
 
   return { isFirstLaunch, setupComplete };
 }

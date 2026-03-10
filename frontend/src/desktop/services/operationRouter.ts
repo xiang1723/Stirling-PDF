@@ -5,6 +5,7 @@ import { STIRLING_SAAS_BACKEND_API_URL } from '@app/constants/connection';
 import { CONVERSION_ENDPOINTS, ENDPOINT_NAMES } from '@app/constants/convertConstants';
 
 export type ExecutionTarget = 'local' | 'remote';
+const DESKTOP_LOCAL_ONLY_MODE = import.meta.env.VITE_DESKTOP_LOCAL_ONLY === 'true';
 
 export class OperationRouter {
   private static instance: OperationRouter;
@@ -132,7 +133,7 @@ export class OperationRouter {
     const mode = await connectionModeService.getCurrentMode();
 
     // Always route team endpoints to SaaS backend (existing logic)
-    if (mode === 'saas' && this.isSaaSBackendEndpoint(operation)) {
+    if (!DESKTOP_LOCAL_ONLY_MODE && mode === 'saas' && this.isSaaSBackendEndpoint(operation)) {
       if (!STIRLING_SAAS_BACKEND_API_URL) {
         throw new Error('VITE_SAAS_BACKEND_API_URL not configured');
       }
@@ -153,6 +154,12 @@ export class OperationRouter {
       console.debug(`[operationRouter] Endpoint ${endpointToCheck} supported locally: ${supportedLocally}`);
 
       if (!supportedLocally) {
+        if (DESKTOP_LOCAL_ONLY_MODE) {
+          throw new Error(
+            `This operation (${endpointToCheck}) is not available in local-only portable mode.`
+          );
+        }
+
         // Local backend doesn't support this - check if SaaS supports it
         const supportedOnSaaS = await endpointAvailabilityService.isEndpointSupportedOnSaaS(endpointToCheck);
         console.debug(`[operationRouter] Endpoint ${endpointToCheck} supported on SaaS: ${supportedOnSaaS}`);
@@ -229,6 +236,10 @@ export class OperationRouter {
    * @returns Promise<boolean> - true if endpoint should skip backend readiness check
    */
   async shouldSkipBackendReadyCheck(endpoint?: string): Promise<boolean> {
+    if (DESKTOP_LOCAL_ONLY_MODE) {
+      return false;
+    }
+
     // Team endpoints always skip (existing logic)
     if (this.isSaaSBackendEndpoint(endpoint)) {
       return true;
@@ -256,6 +267,10 @@ export class OperationRouter {
    * @returns Promise<boolean> - true if endpoint will route to SaaS
    */
   async willRouteToSaaS(endpoint: string): Promise<boolean> {
+    if (DESKTOP_LOCAL_ONLY_MODE) {
+      return false;
+    }
+
     const mode = await connectionModeService.getCurrentMode();
     if (mode !== 'saas') return false;
 

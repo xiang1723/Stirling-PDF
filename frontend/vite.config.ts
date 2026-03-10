@@ -17,9 +17,10 @@ export default defineConfig(({ mode }) => {
     mode === 'desktop' ||
     env.STIRLING_DESKTOP === 'true' ||
     env.VITE_DESKTOP === 'true';
+  const isDesktopLocalOnlyMode = isDesktopMode && env.VITE_DESKTOP_LOCAL_ONLY === 'true';
 
   // Validate required environment variables for desktop builds
-  if (isDesktopMode) {
+  if (isDesktopMode && !isDesktopLocalOnlyMode) {
     const requiredEnvVars = [
       'VITE_SAAS_SERVER_URL',
       'VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY',
