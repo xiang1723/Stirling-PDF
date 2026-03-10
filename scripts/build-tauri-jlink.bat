@@ -1,29 +1,31 @@
 @echo off
+setlocal EnableExtensions EnableDelayedExpansion
+
 REM Build script for Tauri with JLink runtime bundling
 REM This script creates a self-contained Java runtime for Stirling-PDF
 
-echo 🔧 Building Stirling-PDF with JLink runtime for Tauri...
+echo [INFO] Building Stirling-PDF with JLink runtime for Tauri...
 
-echo ▶ Checking Java environment...
+echo [INFO] Checking Java environment...
 java -version >nul 2>&1
 if errorlevel 1 (
-    echo ❌ Java is not installed or not in PATH
+    echo [ERROR] Java is not installed or not in PATH
     exit /b 1
 )
 
 jlink --version >nul 2>&1
 if errorlevel 1 (
-    echo ❌ jlink is not available. Please ensure you have a JDK ^(not just JRE^) installed.
+    echo [ERROR] jlink is not available. Please ensure you have a JDK (not just JRE) installed.
     exit /b 1
 )
 
-echo ▶ Checking Java version...
+echo [INFO] Checking Java version...
 set "JAVA_VERSION_STRING="
 for /f "tokens=3" %%g in ('java -version 2^>^&1 ^| findstr /i "version"') do (
     set "JAVA_VERSION_STRING=%%g"
 )
 if not defined JAVA_VERSION_STRING (
-    echo ❌ Unable to capture Java version string from "java -version"
+    echo [ERROR] Unable to capture Java version string from "java -version"
     exit /b 1
 )
 set "JAVA_VERSION_STRING=%JAVA_VERSION_STRING:"=%"
@@ -40,65 +42,65 @@ for /f "tokens=1,2 delims=." %%a in ("%JAVA_VERSION_STRING%") do (
     )
 )
 if not defined JAVA_MAJOR_VERSION (
-    echo ❌ Unable to determine Java major version from "%JAVA_VERSION_STRING%"
+    echo [ERROR] Unable to determine Java major version from "%JAVA_VERSION_STRING%"
     exit /b 1
 )
 if not defined JAVA_EFFECTIVE_MAJOR (
-    echo ❌ Unable to determine an effective Java major version from "%JAVA_VERSION_STRING%"
+    echo [ERROR] Unable to determine an effective Java major version from "%JAVA_VERSION_STRING%"
     exit /b 1
 )
 for /f "tokens=1 delims=.-" %%c in ("%JAVA_EFFECTIVE_MAJOR%") do set "JAVA_EFFECTIVE_MAJOR=%%c"
 set /a "JAVA_EFFECTIVE_MAJOR_NUM=%JAVA_EFFECTIVE_MAJOR%" >nul 2>&1
 if errorlevel 1 (
-    echo ❌ Java major version "%JAVA_EFFECTIVE_MAJOR%" could not be parsed as an integer. Detected string: "%JAVA_VERSION_STRING%"
+    echo [ERROR] Java major version "%JAVA_EFFECTIVE_MAJOR%" could not be parsed as an integer. Detected string: "%JAVA_VERSION_STRING%"
     exit /b 1
 )
 set "JAVA_EFFECTIVE_MAJOR=%JAVA_EFFECTIVE_MAJOR_NUM%"
 if %JAVA_EFFECTIVE_MAJOR% LSS 21 (
-    echo ❌ Java 21 or higher is required. Found Java %JAVA_EFFECTIVE_MAJOR%
+    echo [ERROR] Java 21 or higher is required. Found Java %JAVA_EFFECTIVE_MAJOR%
     exit /b 1
 )
-echo ✅ Java %JAVA_EFFECTIVE_MAJOR% and jlink detected
+echo [OK] Java %JAVA_EFFECTIVE_MAJOR% and jlink detected
 
-echo ▶ Building Stirling-PDF JAR...
+echo [INFO] Building Stirling-PDF JAR...
 
-set DISABLE_ADDITIONAL_FEATURES=true
+set "DISABLE_ADDITIONAL_FEATURES=true"
 call gradlew.bat clean bootJar --no-daemon
 if errorlevel 1 (
-    echo ❌ Failed to build Stirling-PDF JAR
+    echo [ERROR] Failed to build Stirling-PDF JAR
     exit /b 1
 )
 
 REM Find the built JAR(s)
-echo ▶ Listing all built JAR files in app\core\build\libs:
+echo [INFO] Listing all built JAR files in app\core\build\libs:
 dir /b app\core\build\libs\stirling-pdf-*.jar
-for %%f in (app\core\build\libs\stirling-pdf-*.jar) do set STIRLING_JAR=%%f
+for %%f in (app\core\build\libs\stirling-pdf-*.jar) do set "STIRLING_JAR=%%f"
 if not exist "%STIRLING_JAR%" (
-    echo ❌ No Stirling-PDF JAR found in build/libs/
+    echo [ERROR] No Stirling-PDF JAR found in app\core\build\libs
     exit /b 1
 )
 
-echo ✅ Built JAR: %STIRLING_JAR%
+echo [OK] Built JAR: %STIRLING_JAR%
 
-echo ▶ Creating Tauri directories...
+echo [INFO] Creating Tauri directories...
 if not exist "frontend\src-tauri\libs" mkdir "frontend\src-tauri\libs"
 if not exist "frontend\src-tauri\runtime" mkdir "frontend\src-tauri\runtime"
 
-echo ▶ Copying JAR to Tauri libs directory...
-copy "%STIRLING_JAR%" "frontend\src-tauri\libs\"
-echo ✅ JAR copied to frontend\src-tauri\libs\
+echo [INFO] Copying JAR to Tauri libs directory...
+copy "%STIRLING_JAR%" "frontend\src-tauri\libs\" >nul
+echo [OK] JAR copied to frontend\src-tauri\libs
 
-REM Log out all JAR files now in the Tauri libs directory
-echo ▶ Listing all JAR files in frontend\src-tauri\libs after copy:
+REM Log all JAR files now in the Tauri libs directory
+echo [INFO] Listing all JAR files in frontend\src-tauri\libs after copy:
 dir /b frontend\src-tauri\libs\stirling-pdf-*.jar
 
-echo ▶ Creating custom JRE with jlink...
+echo [INFO] Creating custom JRE with jlink...
 if exist "frontend\src-tauri\runtime\jre" rmdir /s /q "frontend\src-tauri\runtime\jre"
 
 REM Use predefined module list for Windows (jdeps may not be available)
-set MODULES=java.base,java.compiler,java.desktop,java.instrument,java.logging,java.management,java.naming,java.net.http,java.prefs,java.rmi,java.scripting,java.security.jgss,java.security.sasl,java.sql,java.transaction.xa,java.xml,java.xml.crypto,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.unsupported
+set "MODULES=java.base,java.compiler,java.desktop,java.instrument,java.logging,java.management,java.naming,java.net.http,java.prefs,java.rmi,java.scripting,java.security.jgss,java.security.sasl,java.sql,java.transaction.xa,java.xml,java.xml.crypto,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.unsupported"
 
-echo ▶ Creating JLink runtime with modules: %MODULES%
+echo [INFO] Creating JLink runtime with modules: %MODULES%
 
 jlink ^
     --add-modules %MODULES% ^
@@ -109,13 +111,13 @@ jlink ^
     --output "frontend\src-tauri\runtime\jre"
 
 if not exist "frontend\src-tauri\runtime\jre" (
-    echo ❌ Failed to create JLink runtime
+    echo [ERROR] Failed to create JLink runtime
     exit /b 1
 )
 
-echo ✅ JLink runtime created at frontend\src-tauri\runtime\jre
+echo [OK] JLink runtime created at frontend\src-tauri\runtime\jre
 
-echo ▶ Creating launcher scripts for testing...
+echo [INFO] Creating launcher scripts for testing...
 
 REM Create Windows launcher script
 echo @echo off > "frontend\src-tauri\runtime\launch-stirling.bat"
@@ -129,7 +131,7 @@ echo REM Find the Stirling-PDF JAR >> "frontend\src-tauri\runtime\launch-stirlin
 echo for %%%%f in ("%%LIBS_DIR%%\Stirling-PDF-*.jar") do set STIRLING_JAR=%%%%f >> "frontend\src-tauri\runtime\launch-stirling.bat"
 echo. >> "frontend\src-tauri\runtime\launch-stirling.bat"
 echo if not exist "%%STIRLING_JAR%%" ^( >> "frontend\src-tauri\runtime\launch-stirling.bat"
-echo     echo ❌ Stirling-PDF JAR not found in %%LIBS_DIR%% >> "frontend\src-tauri\runtime\launch-stirling.bat"
+echo     echo [ERROR] Stirling-PDF JAR not found in %%LIBS_DIR%% >> "frontend\src-tauri\runtime\launch-stirling.bat"
 echo     exit /b 1 >> "frontend\src-tauri\runtime\launch-stirling.bat"
 echo ^) >> "frontend\src-tauri\runtime\launch-stirling.bat"
 echo. >> "frontend\src-tauri\runtime\launch-stirling.bat"
@@ -140,37 +142,39 @@ echo     -DBROWSER_OPEN=true ^^ >> "frontend\src-tauri\runtime\launch-stirling.b
 echo     -jar "%%STIRLING_JAR%%" ^^ >> "frontend\src-tauri\runtime\launch-stirling.bat"
 echo     %%* >> "frontend\src-tauri\runtime\launch-stirling.bat"
 
-echo ✅ Created launcher scripts for testing
+echo [OK] Created launcher scripts for testing
 
-echo ▶ Testing bundled JRE...
+echo [INFO] Testing bundled JRE...
 "frontend\src-tauri\runtime\jre\bin\java.exe" --version >nul 2>&1
 if errorlevel 1 (
-    echo ❌ Bundled JRE test failed
+    echo [ERROR] Bundled JRE test failed
     exit /b 1
 ) else (
-    echo ✅ Bundled JRE works correctly
+    echo [OK] Bundled JRE works correctly
 )
 
 echo.
-echo ✅ 🎉 JLink build setup completed successfully!
+echo [OK] JLink build setup completed successfully
 echo.
-echo 📊 Summary:
-echo    • JAR: %STIRLING_JAR%
-echo    • Runtime: frontend\src-tauri\runtime\jre
-echo    • Modules: %MODULES%
+echo [INFO] Summary:
+echo    - JAR: %STIRLING_JAR%
+echo    - Runtime: frontend\src-tauri\runtime\jre
+echo    - Modules: %MODULES%
 echo.
-echo 📋 Next steps:
+echo [INFO] Next steps:
 echo    1. cd frontend
 echo    2. npm run tauri-build
 echo.
-echo 💡 Testing:
-echo    • Test bundled runtime: frontend\src-tauri\runtime\launch-stirling.bat
-echo    • Tauri configuration already updated to include bundled JRE
+echo [INFO] Testing:
+echo    - Test bundled runtime: frontend\src-tauri\runtime\launch-stirling.bat
+echo    - Tauri configuration already updated to include bundled JRE
 echo.
-echo 💡 Benefits:
-echo    • No external JRE dependency
-echo    • Smaller distribution size with custom runtime
-echo    • Better security with minimal required modules
-echo    • Consistent Java version across all deployments
+echo [INFO] Benefits:
+echo    - No external JRE dependency
+echo    - Smaller distribution size with custom runtime
+echo    - Better security with minimal required modules
+echo    - Consistent Java version across all deployments
 echo.
-echo ✅ The application will now run without requiring users to install Java!
+echo [OK] The application will now run without requiring users to install Java
+
+exit /b 0
